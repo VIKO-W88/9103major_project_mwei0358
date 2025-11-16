@@ -1517,7 +1517,7 @@ class Mushroom {
 
     const baseAmp = anim.bobAmp != null ? anim.bobAmp : 18;   // Amplitude
     const speed   = anim.bobSpeed != null ? anim.bobSpeed : 0.6;
-    const swayAmp = anim.swayAmp != null ? anim.swayAmp : 0.05; // angle
+    const swayAmp = anim.swayAmp != null ? anim.swayAmp : 0.2; // angle
 
     const phase = this.seed * 0.0007; 
     const bob   = baseAmp * s * sin(t * speed + phase);       // up And down
@@ -2073,6 +2073,11 @@ const SCENE_LAYOUT = [
     seed: 31004,
     anchor: { x: 1034, y: 470 },
     pose: { scale: 0.5, rot: Math.PI / 3 },
+    anim: {
+    swayAmp: 0.4,   // left right
+    bobAmp: 20,      // up down 
+    bobSpeed: 0.8    // up down speed
+    },
     capOverride: {
       w: 340,
       archTop: 120,
@@ -2129,6 +2134,11 @@ const SCENE_LAYOUT = [
     seed: 31005,
     anchor: { x: 1054, y: 112 },
     pose: { scale: 0.4, rot: 45 },
+    anim: {
+    swayAmp: 0.55,   // left right
+    bobAmp: 20,      // up down 
+    bobSpeed: 0.8    // up down speed
+    },
     capOverride: {
       w: 350,
       archTop: 140,
