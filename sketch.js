@@ -1,23 +1,20 @@
-// ================== 全局变量 ==================
 let maxWidth, maxHeight;
-let bg;           // 背景用的 graphics buffer
+let bg;           // bg graphics buffer
 let mushrooms = [];
-const DESIGN_W = 1200;  // 设计稿宽度
-const DESIGN_H = 1000;  // 设计稿高度
+const DESIGN_W = 1200;  // picture width
+const DESIGN_H = 1000;  // picture height
 let bgLines = [];
-// ⭐ 全局时间（给动画用）
+// goble Time
 let globalTime = 0;
 
-// ================== 背景（来源：第一份代码） ==================
 
-// ================== 背景（来源：第一份代码 + 电流动画） ==================
 
 function buildBackground() {
   maxWidth = windowWidth;
   maxHeight = windowHeight;
 
-  bgLines = [];          // ✅ 每次重建时清空
-  randomSeed(1);         // 保证网格结构固定
+  bgLines = [];          // Clear on each rebuild
+  randomSeed(1);         
 
   bg = createGraphics(maxWidth, maxHeight);
   bg.background("#070C08");
@@ -29,7 +26,7 @@ function buildBackground() {
   const lines = [];
   let odd = false;
 
-  // 构建网格点
+  // Construct grid points
   for (let y = 0; y <= maxHeight + gap; y += gap) {
     odd = !odd;
     const rowPoints = [];
@@ -44,7 +41,6 @@ function buildBackground() {
     lines.push(rowPoints);
   }
 
-  // 三角化 + 保存三角形
   odd = true;
   for (let y = 0; y < lines.length - 1; y++) {
     odd = !odd;
@@ -58,16 +54,16 @@ function buildBackground() {
       const b = dotLine[i + 1];
       const c = dotLine[i + 2];
 
-      // 底图：静态三角形
+      // Keep Static triangle
       drawTriangle(bg, a, b, c);
 
-      // 记录下来，用于电流动画
+      // Recorded for use in animated films
       bgLines.push({ a, b, c });
     }
   }
 }
 
-// 画背景用的三角形（原样保留）
+// Keep background
 function drawTriangle(g, a, b, c) {
   g.fill("#BC7653");
   g.stroke("#BC7653");
@@ -111,7 +107,7 @@ function drawTriangle(g, a, b, c) {
   g.endShape(CLOSE);
 }
 
-// ================== 电流网叠加动画 ==================
+// ================== Current Network Superimposed Animation ==================
 function drawBackgroundElectric(t) {
   
   image(bg, 0, 0, width, height);
@@ -126,9 +122,9 @@ function drawBackgroundElectric(t) {
   const baseCol = color("#BC7653");
   const h = hue(baseCol);
   const s = saturation(baseCol);
-  // 流动速度 & 脉冲长度
-  const speed = 0.0006; //越小越慢
-  const pulseLen = 0.3; // 每条边上亮起来的那一小段
+  // speed And length
+  const speed = 0.0006; //The smaller, the slower
+  const pulseLen = 0.3; // The small segment that lights up along each edge
 
   for (const tri of bgLines) {
     const edges = [
@@ -143,11 +139,11 @@ function drawBackgroundElectric(t) {
       const elen = Math.hypot(ex, ey);
       if (elen < 8) continue;
 
-      // 控制这条边是不是活跃
+      
       const activeNoise = noise(p.x * 0.02, p.y * 0.02, t * 0.0003);
       if (activeNoise < 0.45) continue;
 
-      // 脉冲在这条边上的中心位置（0~1，随着时间流动）
+      // The pulse is centred along this edge (0 to 1, as time progresses).
       let centerU =
         (t * speed + (p.x + p.y) * 0.002 + activeNoise * 2.0) % 1;
       if (centerU < 0) centerU += 1;
@@ -156,11 +152,11 @@ function drawBackgroundElectric(t) {
       let u1 = centerU - half;
       let u2 = centerU + half;
 
-      // 把 [u1, u2] 裁成 0~1 范围内的 1 或 2 段
+      
       function drawSeg(a, b) {
         const mid = (a + b) * 0.5;
         const phase = (mid - centerU) / half; // -1 ~ 1
-        const intensity = 1 - Math.abs(phase); // 中间最亮，边缘变暗
+        const intensity = 1 - Math.abs(phase); // Brightest in the centre, fading to darkness at the edges
 
         const x1 = p.x + ex * a;
         const y1 = p.y + ey * a;
@@ -193,7 +189,7 @@ function drawBackgroundElectric(t) {
 }
 
 
-//  Pattern / Cap / Stem / Base / Mushroom 系统 
+//  Pattern / Cap / Stem / Base / Mushroom system
 // Cap Pattern
 const CAP_PATTERN = {
   NONE: "none",
@@ -229,7 +225,7 @@ function withClip(areaPathFn, painterFn) {
   ctx.restore();
 }
 
-// 计算多边形外接矩形
+// Calculate the Enclosing Rectangle of a Polygon
 function boundingBox(poly) {
   let minx = Infinity,
     miny = Infinity,
@@ -242,6 +238,25 @@ function boundingBox(poly) {
     maxy = max(maxy, p.y);
   }
   return { minx, miny, maxx, maxy };
+}
+
+function pulsingColor(baseCol, x, y, speed = 0.6, intensity = 0.8) {
+  const t = globalTime || 0;
+
+  // Noise + time to generate a number (0 - 1) that ‘appears random’
+  const n = noise(x * 0.03, y * 0.03, t * speed); 
+
+  const h0 = hue(baseCol);
+  const s0 = saturation(baseCol);
+  const b0 = brightness(baseCol);
+  const a0 = alpha(baseCol);
+
+  const hueRange = 140; // Control the intensity of colour variation ；the bigger more flowers
+  const h = (h0 + (n - 0.5) * hueRange + 360) % 360;
+  const b = constrain(lerp(b0 * 0.8, 100, n * intensity), 0, 100);
+  const a = a0;
+
+  return color(h, s0, b, a);
 }
 
 // PatternPainter
@@ -340,11 +355,15 @@ const PatternPainter = {
       if (!ok) continue;
 
       noStroke();
-      if (cfg.mono) {
-        fill(accent1);
-      } else {
-        fill(random([accent1, accent2]));
-      }
+      let baseCol = cfg.mono ? accent1 : random([accent1, accent2]);
+      const flickerCol = pulsingColor(
+        baseCol,
+        c.x,
+        c.y,
+        cfg.speed || 2.2,
+        cfg.flashIntensity || 0.45
+      );
+      fill(flickerCol);
       circle(c.x, c.y, 2 * r);
 
       placed.push({ c, r });
@@ -401,12 +420,28 @@ const PatternPainter = {
       if (!ok) continue;
 
       noStroke();
-      fill(accent1);
+      // 外圈点：闪烁
+      const outerCol = pulsingColor(
+        accent1,
+        c.x,
+        c.y,
+        cfg.speed || 1.8,
+        cfg.flashIntensity || 0.4
+      );
+      fill(outerCol);
       circle(c.x, c.y, r * 2);
 
+      // 里面再套一个小点（也闪）
       if (random() < nestProb) {
-        fill(accent2);
         const rr = r * random(0.4, 0.6);
+        const innerCol = pulsingColor(
+          accent2,
+          c.x + 5,
+          c.y + 3,
+          (cfg.speed || 1.8) * 1.1,
+          cfg.flashIntensity || 0.55
+        );
+        fill(innerCol);
         circle(c.x, c.y, rr * 2);
       }
 
@@ -439,6 +474,7 @@ const PatternPainter = {
       ringColor = color(random(360), random(40, 85), random(40, 90));
     }
 
+    // without middle
     fill(ringColor);
 
     const ellW = random(
@@ -508,6 +544,15 @@ const PatternPainter = {
 
         const x = center.x + r0 * cos(th);
         const y = center.y + r0 * sin(th);
+
+        const cCol = pulsingColor(
+          ringColor,
+          x,
+          y,
+          cfg.speed || 1.6,
+          cfg.flashIntensity || 0.5
+        );
+        fill(cCol);
         circle(x, y, d);
 
         th += max(((d + gapArc) * 1.04) / r0, 0.004);
@@ -516,6 +561,7 @@ const PatternPainter = {
   },
 
   // ---------- Base patterns: tracks ----------
+    // ---------- Base patterns: tracks ----------
   baseTracks(deps, cfg = {}) {
     const poly = deps.poly;
     const bb = boundingBox(poly);
@@ -583,12 +629,19 @@ const PatternPainter = {
     ) {
       const trackColor = useAlt ? (trackIndex % 2 === 0 ? c1 : c2) : c1;
 
-      fill(trackColor);
-
       for (let i = 1; i <= circlesPerTrack; i++) {
         const r = radialStep * i;
         const x = center.x + r * cos(angle);
         const y = center.y + r * sin(angle);
+
+        const dotCol = pulsingColor(
+          trackColor,
+          x,
+          y,
+          cfg.speed || 1.4,
+          cfg.flashIntensity || 0.35
+        );
+        fill(dotCol);
         circle(x, y, circleDiameter);
       }
 
@@ -712,7 +765,6 @@ const PatternPainter = {
     }
 
     noStroke();
-    fill(dc);
 
     const stepY = height / (rows + 1);
 
@@ -729,6 +781,15 @@ const PatternPainter = {
         const y = yBase + random(-jitterY, jitterY);
 
         const r = baseR * scale * (1 + random(-0.05, 0.05));
+
+        const col = pulsingColor(
+          dc,
+          x,
+          y,
+          opt.speed || 1.7,
+          opt.flashIntensity || 0.4
+        );
+        fill(col);
         circle(x, y, r * 2);
       }
     }
@@ -770,7 +831,6 @@ const PatternPainter = {
     }
 
     noStroke();
-    fill(dc);
 
     let placed = [];
     let count = 0;
@@ -797,7 +857,16 @@ const PatternPainter = {
       }
       if (!ok) continue;
 
+      const col = pulsingColor(
+        dc,
+        x,
+        y,
+        opt.speed || 1.9,
+        opt.flashIntensity || 0.5
+      );
+      fill(col);
       circle(x, y, r * 2);
+
       placed.push({ c: createVector(x, y), r });
       count++;
     }
@@ -1435,12 +1504,12 @@ class Mushroom {
     this.stem = new Stem(spec.stem || {});
     this.base = new BasePart(spec.base || {});
 
-    // ⭐ 动画参数（如果 layout 里没写，就用默认）
+    
     this.anim = spec.anim || {};
   }
 
   draw() {
-    // ⭐ 每个蘑菇自己的随机种子，保证纹理不闪烁
+    // everyone has self seed
     randomSeed(this.seed);
     noiseSeed(this.seed);
 
@@ -1503,7 +1572,7 @@ class Mushroom {
   }
 }
 
-// ---------- Scene class（目前可以不用，但保留） ----------
+// ---------- Scene class ----------
 class Scene {
   constructor() {
     this.items = [];
@@ -1617,7 +1686,7 @@ const TYPE_LIBRARY = {
   }
 };
 
-// 场景布局（你原来的 SCENE_LAYOUT）
+// outlay（from SCENE_LAYOUT）
 const SCENE_LAYOUT = [
   {
     id: "m_greenL",
@@ -2114,7 +2183,7 @@ const SCENE_LAYOUT = [
   }
 ];
 
-// 工厂函数
+// function Group
 function makeMushroomFromLayout(layout) {
   const typeSpec = TYPE_LIBRARY[layout.type];
   if (!typeSpec) {
@@ -2161,15 +2230,13 @@ function makeMushroomFromLayout(layout) {
     stem: mergedStem,
     base: mergedBase,
     layout: mergedLayout,
-    anim: layout.anim || {}   // ⭐ 把布局里的动画参数传进去（现在没写也没关系）
+    anim: layout.anim || {}   // Pass the animation parameters from the layout into it.
   });
 }
 
-// ==================== 大蘑菇：伞盖 & 伞柄（你的原版） ====================
 
-/* ================== 伞盖：更像原画的大蘑菇 ================== */
 function drawCapReplica(cx, cy, W, H) {
-  // ⭐ 固定随机种子，保证动画过程中图案不会闪
+  // add seed 
   randomSeed(20241113);
   noiseSeed(12345);
 
@@ -2430,7 +2497,7 @@ function drawCapReplica(cx, cy, W, H) {
 
 /* ====================== 伞柄 ====================== */
 function drawStemUniform() {
-  // ⭐ 固定随机，防止红点每帧抖动
+  //  add seed
   randomSeed(20241114);
 
   const H = 680,
@@ -2591,28 +2658,28 @@ function setup() {
     if (m) mushrooms.push(m);
   }
 
-  frameRate(60); // 可选，不写也可以
+  frameRate(60); 
 }
 
 
 function draw() {
-  // ⭐ 更新全局时间（秒）
+  //  goble Time
   globalTime = millis() / 1000.0;
 
-  // ========= 0. 背景永远铺满整个窗口 =========
-  //image(bg, 0, 0, width, height);  // ✅ 关键：不受后面的 scale 影响
+  // ========= background always full screen =========
+  //image(bg, 0, 0, width, height);  // Key: unaffected by the subsequent scale
   drawBackgroundElectric(millis());
 
-  // ========= 1. 计算蘑菇场景的缩放 =========
+  // ========= mushroom scale =========
   const sx = width  / DESIGN_W;
   const sy = height / DESIGN_H;
-  const s  = min(sx, sy);  // 等比缩放
+  const s  = min(sx, sy);  // Isometric scaling
 
-  // 为了让 1200×1000 的“场景”居中
+  //  1200×1000 background stay middle
   const offsetX = (width  - DESIGN_W * s) / 2;
   const offsetY = (height - DESIGN_H * s) / 2;
 
-  // ========= 2. 在缩放后的坐标系里画蘑菇 =========
+  // ========= draw mushrooms after scale =========
   push();
   translate(offsetX, offsetY);
   scale(s);
@@ -2620,7 +2687,7 @@ function draw() {
   // 2.1 bigest mushroom
   push();
   const t = globalTime;
-  const mainBob  = 40 * sin(t * 0.55);                 // up down
+  const mainBob  = 35 * sin(t * 0.55);                 // up down
   const mainTilt = radians(-7) + 0.04 * sin(t * 0.4);  // left right
 
   translate(DESIGN_W * 0.35, DESIGN_H * 0.75 + mainBob);
