@@ -113,7 +113,7 @@ function drawTriangle(g, a, b, c) {
 
 // ================== 电流网叠加动画 ==================
 function drawBackgroundElectric(t) {
-  // 1）先铺静态背景
+  // 先铺静态背景图
   image(bg, 0, 0, width, height);
 
   if (!bgLines || bgLines.length === 0) return;
@@ -121,14 +121,15 @@ function drawBackgroundElectric(t) {
   push();
   noFill();
   colorMode(HSB, 360, 100, 100, 100);
+  strokeCap(ROUND);
 
   const baseCol = color("#BC7653");
   const h = hue(baseCol);
   const s = saturation(baseCol);
-  const baseB = brightness(baseCol);
 
-  const speed = 0.003;   // 流动速度
-  strokeCap(ROUND);
+  // 流动速度 & 脉冲长度
+  const speed = 0.0018;
+  const pulseLen = 0.35; // 每条边上亮起来的那一小段
 
   for (const tri of bgLines) {
     const edges = [
@@ -138,25 +139,54 @@ function drawBackgroundElectric(t) {
     ];
 
     for (const [p, q] of edges) {
-      const cx = (p.x + q.x) * 0.5;
-      const cy = (p.y + q.y) * 0.5;
+      const ex = q.x - p.x;
+      const ey = q.y - p.y;
+      const elen = Math.hypot(ex, ey);
+      if (elen < 8) continue;
 
-      const wave = (sin(cx * 0.005 + t * speed) +
-                    cos(cy * 0.004 + t * speed * 0.7)) * 0.5 + 0.5;
-      const noiseMod = noise(cx * 0.01, cy * 0.01, t * 0.0005);
+      // 控制这条边是不是活跃（噗噗闪）
+      const activeNoise = noise(p.x * 0.02, p.y * 0.02, t * 0.0003);
+      if (activeNoise < 0.45) continue;
 
-      let flicker = wave * 0.7 + noiseMod * 0.6 - 0.2;
-      flicker = constrain(flicker, 0, 1);
+      // 脉冲在这条边上的中心位置（0~1，随着时间流动）
+      let centerU =
+        (t * speed + (p.x + p.y) * 0.002 + activeNoise * 2.0) % 1;
+      if (centerU < 0) centerU += 1;
 
-      if (flicker < 0.05) continue;
+      const half = pulseLen * 0.5;
+      let u1 = centerU - half;
+      let u2 = centerU + half;
 
-      const b = lerp(baseB * 0.3, 100, flicker);
-      const alpha = lerp(0, 90, flicker);
-      const w = lerp(0.4, 2.2, flicker);
+      // 把 [u1, u2] 裁成 0~1 范围内的 1 或 2 段
+      function drawSeg(a, b) {
+        const mid = (a + b) * 0.5;
+        const phase = (mid - centerU) / half; // -1 ~ 1
+        const intensity = 1 - Math.abs(phase); // 中间最亮，边缘变暗
 
-      stroke(h, s, b, alpha);
-      strokeWeight(w);
-      line(p.x, p.y, q.x, q.y);
+        const x1 = p.x + ex * a;
+        const y1 = p.y + ey * a;
+        const x2 = p.x + ex * b;
+        const y2 = p.y + ey * b;
+
+        const bri = 40 + 60 * intensity;
+        const alp = 10 + 90 * intensity;
+        const w = 0.5 + 2.5 * intensity;
+
+        stroke(h, s, bri, alp);
+        strokeWeight(w);
+        line(x1, y1, x2, y2);
+      }
+
+      if (u1 < 0) {
+        // 左边越界，拆成两段
+        drawSeg(0, u2);
+        drawSeg(1 + u1, 1);
+      } else if (u2 > 1) {
+        drawSeg(u1, 1);
+        drawSeg(0, u2 - 1);
+      } else {
+        drawSeg(u1, u2);
+      }
     }
   }
 
