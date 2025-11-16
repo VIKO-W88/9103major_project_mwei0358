@@ -173,7 +173,6 @@ function drawBackgroundElectric(t) {
       }
 
       if (u1 < 0) {
-        // 左边越界，拆成两段
         drawSeg(0, u2);
         drawSeg(1 + u1, 1);
       } else if (u2 > 1) {
@@ -251,7 +250,7 @@ function pulsingColor(baseCol, x, y, speed = 0.6, intensity = 0.8) {
   const b0 = brightness(baseCol);
   const a0 = alpha(baseCol);
 
-  const hueRange = 140; // Control the intensity of colour variation ；the bigger more flowers
+  const hueRange = 120; // Control the intensity of colour variation ；the bigger more flowers
   const h = (h0 + (n - 0.5) * hueRange + 360) % 360;
   const b = constrain(lerp(b0 * 0.8, 100, n * intensity), 0, 100);
   const a = a0;
@@ -420,7 +419,7 @@ const PatternPainter = {
       if (!ok) continue;
 
       noStroke();
-      // 外圈点：闪烁
+      // Outer circle dot: Flashing
       const outerCol = pulsingColor(
         accent1,
         c.x,
@@ -431,7 +430,7 @@ const PatternPainter = {
       fill(outerCol);
       circle(c.x, c.y, r * 2);
 
-      // 里面再套一个小点（也闪）
+      // Inside is another smaller one（sparkling)
       if (random() < nestProb) {
         const rr = r * random(0.4, 0.6);
         const innerCol = pulsingColor(
@@ -561,7 +560,6 @@ const PatternPainter = {
   },
 
   // ---------- Base patterns: tracks ----------
-    // ---------- Base patterns: tracks ----------
   baseTracks(deps, cfg = {}) {
     const poly = deps.poly;
     const bb = boundingBox(poly);
@@ -1517,17 +1515,17 @@ class Mushroom {
     const t = globalTime;
     const anim = this.anim || {};
 
-    const baseAmp = anim.bobAmp != null ? anim.bobAmp : 18;   // 设计坐标里的振幅
+    const baseAmp = anim.bobAmp != null ? anim.bobAmp : 18;   // Amplitude
     const speed   = anim.bobSpeed != null ? anim.bobSpeed : 0.6;
-    const swayAmp = anim.swayAmp != null ? anim.swayAmp : 0.05; // 倾斜角度（弧度）
+    const swayAmp = anim.swayAmp != null ? anim.swayAmp : 0.05; // angle
 
-    const phase = this.seed * 0.0007; // 每个蘑菇相位不同
-    const bob   = baseAmp * s * sin(t * speed + phase);       // 上下轻轻浮动
-    const sway  = swayAmp * sin(t * speed * 0.9 + phase + 1); // 轻微左右摇摆
+    const phase = this.seed * 0.0007; 
+    const bob   = baseAmp * s * sin(t * speed + phase);       // up And down
+    const sway  = swayAmp * sin(t * speed * 0.9 + phase + 1); // left right
 
     const ax = this.anchor.x;
-    const ay = this.anchor.y + bob;   // ⭐ 加入上下位移
-    const r  = this.rot + sway;       // ⭐ 加入轻微旋转
+    const ay = this.anchor.y + bob;   // move
+    const r  = this.rot + sway;       // rotation
 
     const offCap = this.layout.capOffset || { x: 0, y: 0 };
     const offStem = this.layout.stemOffset || { x: 0, y: 80 };
@@ -2366,8 +2364,8 @@ function drawCapReplica(cx, cy, W, H) {
     }
   }
 
-  noStroke();
-  fill("#7C3A6B");
+    noStroke();
+  const ringBaseCol = color("#7C3A6B"); 
 
   const rings = 20;
   for (let r = 0; r < rings; r++) {
@@ -2393,6 +2391,15 @@ function drawCapReplica(cx, cy, W, H) {
       let d =
         lerp(16, 7.5, t) *
         (0.92 + 0.14 * noise(r * 0.3, k * 0.6));
+
+      const cCol = pulsingColor(
+        ringBaseCol,
+        x,
+        y,
+        1.4,   // flash speed，1 slowl 2 faster
+        0.45   // Flicker intensity: 0.2 Gentle, 0.6 Fairly noticeable
+      );
+      fill(cCol);
       circle(x, y, d);
     }
   }
@@ -2465,37 +2472,48 @@ function drawCapReplica(cx, cy, W, H) {
   ctx.closePath();
   ctx.clip();
 
-  fill(255);
-  const beans = 22;
-  for (let i = 0; i < beans; i++) {
-    const a = lerp(
-      aStart + 0.03,
-      aEnd - 0.03,
-      i / (beans - 1)
-    );
-    const rx =
-      ((topW + innerW) / 4) * cos(a);
-    const ry =
-      ((topH + innerH) / 4) * sin(a);
-    const midWave = rimWave(a) * 0.5;
-    push();
-    translate(
-      cx + rx,
-      cy - 6 + ry + yBend(a) + midWave
-    );
-    rotate(random(-0.35, 0.35));
-    ellipse(
-      0,
-      0,
-      random(26, 44),
-      random(16, 26)
-    );
-    pop();
-  }
+  // white And yellow on top bean
+const beanYellow = color(48, 50, 100, 100);  // yellow
+const beanWhite  = color(0, 0, 100, 100);   // white
+
+const beans = 22;
+for (let i = 0; i < beans; i++) {
+  const a = lerp(
+    aStart + 0.03,
+    aEnd - 0.03,
+    i / (beans - 1)
+  );
+  const rx = ((topW + innerW) / 4) * cos(a);
+  const ry = ((topH + innerH) / 4) * sin(a);
+  const midWave = rimWave(a) * 0.5;
+
+  const bx = cx + rx;
+  const by = cy - 6 + ry + yBend(a) + midWave;
+  const baseCol = (i % 2 === 0) ? beanYellow : beanWhite;
+  const beanCol = pulsingColor(
+    baseCol,
+    bx,
+    by,
+    2.6,  // flashing speed
+    0.70  // flicker intensity
+  );
+  fill(beanCol);
+
+  push();
+  translate(bx, by);
+  rotate(random(-0.35, 0.35));
+  ellipse(
+    0,
+    0,
+    random(26, 44),
+    random(16, 26)
+  );
+  pop();
+}
   ctx.restore();
 }
 
-/* ====================== 伞柄 ====================== */
+//====================== bigest stem ====================== 
 function drawStemUniform() {
   //  add seed
   randomSeed(20241114);
@@ -2598,7 +2616,7 @@ function drawStemUniform() {
   for (let i = 1; i <= sideCols; i++) colXs.push(i * stepX, -i * stepX);
 
   noStroke();
-  fill("#C4162B");
+  const stemDotBase = color("#C4162B"); 
   for (let c = 0; c < colXs.length; c++) {
     const x0 = colXs[c],
       isCenter = x0 === 0;
@@ -2617,6 +2635,16 @@ function drawStemUniform() {
         baseDot +
         lerp(2, 7, tW) +
         (isCenter ? centerBoost : 0);
+
+      // red doc flash
+      const dotCol = pulsingColor(
+        stemDotBase,
+        x,
+        y,
+        2.2,  // speed
+        0.55  // Intensity
+      );
+      fill(dotCol);
       circle(x, y, d);
     }
   }
@@ -2698,12 +2726,12 @@ function draw() {
   pop();
 
   // 2.2 small mushroom（from SCENE_LAYOUT ）
-  const smallAmp = 50;          // ⬅ 小蘑菇起伏幅度
-  const smallFreq = 2;        // ⬅ 起伏速度（越大越快）
+  const smallAmp = 40;          //Amplitude of the small mushroom's undulation
+  const smallFreq = 2;        // Ramp rate (higher faster speed)
 
   for (let i = 0; i < mushrooms.length; i++) {
     const m = mushrooms[i];
-    const bob = smallAmp * sin(t * smallFreq + i * 0.7);  // 每个错开一点
+    const bob = smallAmp * sin(t * smallFreq + i * 0.7);
 
     push();
     translate(0, bob);
