@@ -113,7 +113,7 @@ function drawTriangle(g, a, b, c) {
 
 // ================== 电流网叠加动画 ==================
 function drawBackgroundElectric(t) {
-  // 先铺静态背景图
+  
   image(bg, 0, 0, width, height);
 
   if (!bgLines || bgLines.length === 0) return;
@@ -126,10 +126,9 @@ function drawBackgroundElectric(t) {
   const baseCol = color("#BC7653");
   const h = hue(baseCol);
   const s = saturation(baseCol);
-
   // 流动速度 & 脉冲长度
-  const speed = 0.0018;
-  const pulseLen = 0.35; // 每条边上亮起来的那一小段
+  const speed = 0.0006; //越小越慢
+  const pulseLen = 0.3; // 每条边上亮起来的那一小段
 
   for (const tri of bgLines) {
     const edges = [
@@ -144,7 +143,7 @@ function drawBackgroundElectric(t) {
       const elen = Math.hypot(ex, ey);
       if (elen < 8) continue;
 
-      // 控制这条边是不是活跃（噗噗闪）
+      // 控制这条边是不是活跃
       const activeNoise = noise(p.x * 0.02, p.y * 0.02, t * 0.0003);
       if (activeNoise < 0.45) continue;
 
@@ -194,8 +193,7 @@ function drawBackgroundElectric(t) {
 }
 
 
-// ================== Pattern / Cap / Stem / Base / Mushroom 系统 ==================
-
+//  Pattern / Cap / Stem / Base / Mushroom 系统 
 // Cap Pattern
 const CAP_PATTERN = {
   NONE: "none",
