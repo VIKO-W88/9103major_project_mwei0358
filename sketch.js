@@ -2617,11 +2617,11 @@ function draw() {
   translate(offsetX, offsetY);
   scale(s);
 
-  // 2.1 大蘑菇（用设计稿坐标）—— ⭐ 加一点上下浮动 & 轻微摇摆
+  // 2.1 bigest mushroom
   push();
   const t = globalTime;
-  const mainBob  = 26 * sin(t * 0.55);                 // 上下
-  const mainTilt = radians(-7) + 0.04 * sin(t * 0.4);  // 轻微左右摇
+  const mainBob  = 40 * sin(t * 0.55);                 // up down
+  const mainTilt = radians(-7) + 0.04 * sin(t * 0.4);  // left right
 
   translate(DESIGN_W * 0.35, DESIGN_H * 0.75 + mainBob);
   rotate(mainTilt);
@@ -2630,9 +2630,18 @@ function draw() {
   drawCapReplica(0, -650, 880, 360);
   pop();
 
-  // 2.2 小蘑菇（你原来的 SCENE_LAYOUT 坐标，内部自己带动画）
-  for (const m of mushrooms) {
+  // 2.2 small mushroom（from SCENE_LAYOUT ）
+  const smallAmp = 50;          // ⬅ 小蘑菇起伏幅度
+  const smallFreq = 2;        // ⬅ 起伏速度（越大越快）
+
+  for (let i = 0; i < mushrooms.length; i++) {
+    const m = mushrooms[i];
+    const bob = smallAmp * sin(t * smallFreq + i * 0.7);  // 每个错开一点
+
+    push();
+    translate(0, bob);
     m.draw();
+    pop();
   }
 
   pop();
@@ -2640,6 +2649,6 @@ function draw() {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-  buildBackground(); // 重新做一次满屏背景
+  buildBackground(); // full screen beckground again
   redraw();
 }
