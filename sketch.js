@@ -7,8 +7,7 @@ let bgLines = [];
 // goble Time
 let globalTime = 0;
 
-
-
+// ================== Background generation (static triangular grid) ==================
 function buildBackground() {
   maxWidth = windowWidth;
   maxHeight = windowHeight;
@@ -26,7 +25,7 @@ function buildBackground() {
   const lines = [];
   let odd = false;
 
-  // Construct grid points
+  // Construct grid points with slight jitter to avoid a perfect regular grid
   for (let y = 0; y <= maxHeight + gap; y += gap) {
     odd = !odd;
     const rowPoints = [];
@@ -41,6 +40,7 @@ function buildBackground() {
     lines.push(rowPoints);
   }
 
+  // Build triangles from the grid rows and store edges for later animation
   odd = true;
   for (let y = 0; y < lines.length - 1; y++) {
     odd = !odd;
@@ -57,7 +57,7 @@ function buildBackground() {
       // Keep Static triangle
       drawTriangle(bg, a, b, c);
 
-      // Recorded for use in animated films
+      // Recorded for use in animated films (electric lines along triangle edges)
       bgLines.push({ a, b, c });
     }
   }
@@ -107,9 +107,9 @@ function drawTriangle(g, a, b, c) {
   g.endShape(CLOSE);
 }
 
-// ================== Current Network Superimposed Animation ==================
+// ================== Background overlay animation: electric pulses on the grid ==================
 function drawBackgroundElectric(t) {
-  
+  // Draw the pre-rendered static background, scaled to the current canvas
   image(bg, 0, 0, width, height);
 
   if (!bgLines || bgLines.length === 0) return;
@@ -139,7 +139,7 @@ function drawBackgroundElectric(t) {
       const elen = Math.hypot(ex, ey);
       if (elen < 8) continue;
 
-      
+      // Use noise to decide whether this edge is active at this time
       const activeNoise = noise(p.x * 0.02, p.y * 0.02, t * 0.0003);
       if (activeNoise < 0.45) continue;
 
@@ -152,7 +152,7 @@ function drawBackgroundElectric(t) {
       let u1 = centerU - half;
       let u2 = centerU + half;
 
-      
+      // Draw only a small bright segment on each active edge to simulate a moving spark
       function drawSeg(a, b) {
         const mid = (a + b) * 0.5;
         const phase = (mid - centerU) / half; // -1 ~ 1
@@ -189,6 +189,8 @@ function drawBackgroundElectric(t) {
 
 
 //  Pattern / Cap / Stem / Base / Mushroom system
+
+// ================== Pattern type definitions (cap / stem / base) ==================
 // Cap Pattern
 const CAP_PATTERN = {
   NONE: "none",
@@ -239,6 +241,7 @@ function boundingBox(poly) {
   return { minx, miny, maxx, maxy };
 }
 
+// ================== Shared pulsing color helper for flickering dots ==================
 function pulsingColor(baseCol, x, y, speed = 0.6, intensity = 0.8) {
   const t = globalTime || 0;
 
@@ -258,7 +261,7 @@ function pulsingColor(baseCol, x, y, speed = 0.6, intensity = 0.8) {
   return color(h, s0, b, a);
 }
 
-// PatternPainter
+// ================== PatternPainter: draws all cap / stem / base patterns ==================
 const PatternPainter = {
   paint(type, deps, opt = {}) {
     if (
@@ -871,7 +874,7 @@ const PatternPainter = {
   }
 };
 
-// ---------- Cap class ----------
+// ================== Cap class: builds and draws the mushroom cap ==================
 class Cap {
   constructor(spec) {
     this.visible = spec.visible != null ? spec.visible : true;
@@ -1070,6 +1073,7 @@ class Cap {
       accent1: this.accent1,
       accent2: this.accent2
     };
+    // Draw the cap pattern inside the cap shape using PatternPainter
     withClip((c) => {
       this.path(c);
     }, () => {
@@ -1082,7 +1086,7 @@ class Cap {
   }
 }
 
-// ---------- Stem class ----------
+// ================== Stem class: builds and draws the mushroom stem ==================
 class Stem {
   constructor(spec) {
     this.visible = spec.visible != null ? spec.visible : true;
@@ -1244,6 +1248,7 @@ class Stem {
       ctx2.restore();
     }
 
+    // Clip the stem area and render the stem pattern inside
     withClip((ctx2) => this.path(ctx2), () => {
       const bounds = {
         x: -this.bottomW / 2,
@@ -1276,7 +1281,7 @@ class Stem {
   }
 }
 
-// ---------- BasePart class ----------
+// ================== BasePart class: optional base under the stem ==================
 class BasePart {
   constructor(spec) {
     this.visible = spec.visible != null ? spec.visible : false;
@@ -1413,6 +1418,7 @@ class BasePart {
     ctx.fill();
     ctx.restore();
 
+    // Clip the base area and render the base pattern inside
     withClip((ctx2) => this.path(ctx2), () => {
       const bounds = {
         x: -this.w * 0.5,
@@ -1472,7 +1478,7 @@ class BasePart {
   }
 }
 
-// ---------- Mushroom class ----------
+// ================== Mushroom class: combines cap, stem, base and animates ==================
 class Mushroom {
   constructor(spec) {
     this.id = spec.id || "m";
@@ -1502,12 +1508,12 @@ class Mushroom {
     this.stem = new Stem(spec.stem || {});
     this.base = new BasePart(spec.base || {});
 
-    
+    // Per-mushroom animation parameters (bobbing and swaying)
     this.anim = spec.anim || {};
   }
 
   draw() {
-    // everyone has self seed
+    // Give each mushroom its own random/ noise seed for stable flicker per instance
     randomSeed(this.seed);
     noiseSeed(this.seed);
 
@@ -1515,6 +1521,7 @@ class Mushroom {
     const t = globalTime;
     const anim = this.anim || {};
 
+    // Simple bob + sway animation to make the mushroom gently move
     const baseAmp = anim.bobAmp != null ? anim.bobAmp : 18;   // Amplitude
     const speed   = anim.bobSpeed != null ? anim.bobSpeed : 0.6;
     const swayAmp = anim.swayAmp != null ? anim.swayAmp : 0.2; // angle
@@ -1570,7 +1577,7 @@ class Mushroom {
   }
 }
 
-// ---------- Scene class ----------
+// ================== Scene class: holds all mushrooms and draws them ==================
 class Scene {
   constructor() {
     this.items = [];
@@ -1585,7 +1592,7 @@ class Scene {
 
 // ---------- TYPE_LIBRARY / SCENE_LAYOUT / makeMushroomFromLayout ----------
 
-// Type library
+// ================== TYPE_LIBRARY: reusable mushroom templates ==================
 const TYPE_LIBRARY = {
   default: {
     cap: {
@@ -1684,7 +1691,7 @@ const TYPE_LIBRARY = {
   }
 };
 
-// outlay（from SCENE_LAYOUT）
+// ================== SCENE_LAYOUT: defines each mushroom instance in the scene ==================
 const SCENE_LAYOUT = [
   {
     id: "m_greenL",
@@ -2074,9 +2081,9 @@ const SCENE_LAYOUT = [
     anchor: { x: 1034, y: 470 },
     pose: { scale: 0.5, rot: Math.PI / 3 },
     anim: {
-    swayAmp: 0.4,   // left right
-    bobAmp: 20,      // up down 
-    bobSpeed: 0.8    // up down speed
+      swayAmp: 0.4,   // left right
+      bobAmp: 20,      // up down 
+      bobSpeed: 0.8    // up down speed
     },
     capOverride: {
       w: 340,
@@ -2135,9 +2142,9 @@ const SCENE_LAYOUT = [
     anchor: { x: 1054, y: 112 },
     pose: { scale: 0.4, rot: 45 },
     anim: {
-    swayAmp: 0.55,   // left right
-    bobAmp: 20,      // up down 
-    bobSpeed: 0.8    // up down speed
+      swayAmp: 0.55,   // left right
+      bobAmp: 20,      // up down 
+      bobSpeed: 0.8    // up down speed
     },
     capOverride: {
       w: 350,
@@ -2191,7 +2198,7 @@ const SCENE_LAYOUT = [
   }
 ];
 
-// function Group
+// ================== Helper: build a Mushroom from a layout entry + type template ==================
 function makeMushroomFromLayout(layout) {
   const typeSpec = TYPE_LIBRARY[layout.type];
   if (!typeSpec) {
@@ -2243,6 +2250,7 @@ function makeMushroomFromLayout(layout) {
 }
 
 
+// ================== drawCapReplica: custom big main cap shape and pattern ==================
 function drawCapReplica(cx, cy, W, H) {
   // add seed 
   randomSeed(20241113);
@@ -2374,7 +2382,7 @@ function drawCapReplica(cx, cy, W, H) {
     }
   }
 
-    noStroke();
+  noStroke();
   const ringBaseCol = color("#7C3A6B"); 
 
   const rings = 20;
@@ -2483,43 +2491,43 @@ function drawCapReplica(cx, cy, W, H) {
   ctx.clip();
 
   // white And yellow on top bean
-const beanYellow = color(48, 50, 100, 100);  // yellow
-const beanWhite  = color(0, 0, 100, 100);   // white
+  const beanYellow = color(48, 50, 100, 100);  // yellow
+  const beanWhite  = color(0, 0, 100, 100);   // white
 
-const beans = 22;
-for (let i = 0; i < beans; i++) {
-  const a = lerp(
-    aStart + 0.03,
-    aEnd - 0.03,
-    i / (beans - 1)
-  );
-  const rx = ((topW + innerW) / 4) * cos(a);
-  const ry = ((topH + innerH) / 4) * sin(a);
-  const midWave = rimWave(a) * 0.5;
+  const beans = 22;
+  for (let i = 0; i < beans; i++) {
+    const a = lerp(
+      aStart + 0.03,
+      aEnd - 0.03,
+      i / (beans - 1)
+    );
+    const rx = ((topW + innerW) / 4) * cos(a);
+    const ry = ((topH + innerH) / 4) * sin(a);
+    const midWave = rimWave(a) * 0.5;
 
-  const bx = cx + rx;
-  const by = cy - 6 + ry + yBend(a) + midWave;
-  const baseCol = (i % 2 === 0) ? beanYellow : beanWhite;
-  const beanCol = pulsingColor(
-    baseCol,
-    bx,
-    by,
-    2.6,  // flashing speed
-    0.70  // flicker intensity
-  );
-  fill(beanCol);
+    const bx = cx + rx;
+    const by = cy - 6 + ry + yBend(a) + midWave;
+    const baseCol = (i % 2 === 0) ? beanYellow : beanWhite;
+    const beanCol = pulsingColor(
+      baseCol,
+      bx,
+      by,
+      2.6,  // flashing speed
+      0.70  // flicker intensity
+    );
+    fill(beanCol);
 
-  push();
-  translate(bx, by);
-  rotate(random(-0.35, 0.35));
-  ellipse(
-    0,
-    0,
-    random(26, 44),
-    random(16, 26)
-  );
-  pop();
-}
+    push();
+    translate(bx, by);
+    rotate(random(-0.35, 0.35));
+    ellipse(
+      0,
+      0,
+      random(26, 44),
+      random(16, 26)
+    );
+    pop();
+  }
   ctx.restore();
 }
 
@@ -2688,8 +2696,10 @@ function setup() {
   pixelDensity(2);
   colorMode(HSB, 360, 100, 100, 100);
 
+  // Build static background and cache its geometry
   buildBackground();
 
+  // Build all mushrooms from the scene layout
   mushrooms = [];
   for (const layout of SCENE_LAYOUT) {
     const m = makeMushroomFromLayout(layout);
@@ -2701,14 +2711,14 @@ function setup() {
 
 
 function draw() {
-  //  goble Time
+  // Update global time (seconds)
   globalTime = millis() / 1000.0;
 
-  // ========= background always full screen =========
-  //image(bg, 0, 0, width, height);  // Key: unaffected by the subsequent scale
+  // ========= Background: always cover the full screen =========
+  // image(bg, 0, 0, width, height);  // Key: unaffected by the subsequent scale
   drawBackgroundElectric(millis());
 
-  // ========= mushroom scale =========
+  // ========= Global scene scaling to keep 1200 x 1000 design centered =========
   const sx = width  / DESIGN_W;
   const sy = height / DESIGN_H;
   const s  = min(sx, sy);  // Isometric scaling
@@ -2722,7 +2732,7 @@ function draw() {
   translate(offsetX, offsetY);
   scale(s);
 
-  // 2.1 bigest mushroom
+  // 2.1 bigest mushroom: main hero mushroom with its own bob + tilt animation
   push();
   const t = globalTime;
   const mainBob  = 35 * sin(t * 0.55);                 // up down
@@ -2735,7 +2745,7 @@ function draw() {
   drawCapReplica(0, -650, 880, 360);
   pop();
 
-  // 2.2 small mushroom（from SCENE_LAYOUT ）
+  // 2.2 small mushroom（from SCENE_LAYOUT ）: all smaller mushrooms bob in place
   const smallAmp = 40;          //Amplitude of the small mushroom's undulation
   const smallFreq = 2;        // Ramp rate (higher faster speed)
 
